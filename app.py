@@ -79,6 +79,29 @@ class ConversationApp:
         with open(self.conversations_dir / filename, "w") as f:
             json.dump(conversation, f, indent=2)
 
+    def generate_summary(self, conversation):
+        messages = [
+            {
+                "role": "system", 
+                "content": "Versetze dich in die Rolle eines Psychotherapeuten und fasse das Gespräch aus deiner Sicht zusammen. Ohne Fragen, allerdings mit deiner Interpretation des Gesprächs."
+            },
+            {
+                "role": "user", 
+                "content": str(conversation)
+            }
+        ]
+        
+        summary = self.generate_response(messages)
+        return summary
+
+    def save_summary(self, summary, timestamp):
+        summary_dir = Path("conversation_summary")
+        summary_dir.mkdir(exist_ok=True)
+        
+        filename = f"summary_{timestamp}.json"
+        with open(summary_dir / filename, "w") as f:
+            json.dump({"summary": summary}, f, indent=2)
+
     def run(self):
         conversation = []
         history = self.load_conversation_history()
@@ -119,7 +142,7 @@ class ConversationApp:
             conversation.append({"role": "assistant", "content": initial_message})
 
         while True:
-            print("\nPress Enter to start conversation / Type 'exit' to end conversation:")
+            print("\nPress Enter to speak or type 'exit' to end conversation:")
             user_input = input()
             
             if user_input.lower() == 'exit':
@@ -140,8 +163,15 @@ class ConversationApp:
             self.text_to_speech(assistant_response)
             conversation.append({"role": "assistant", "content": assistant_response})
 
+        # Nach dem Speichern der Konversation
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         self.save_conversation(conversation)
-        print("\nConversation saved. Goodbye!")
+        
+        # Generiere und speichere die Zusammenfassung
+        summary = self.generate_summary(conversation)
+        self.save_summary(summary, timestamp)
+        
+        print("\nConversation and summary saved. Goodbye!")
 
 if __name__ == "__main__":
     app = ConversationApp()

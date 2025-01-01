@@ -8,6 +8,7 @@ venv/
 
 # Conversations
 conversations/
+conversation_summary/
 
 # Audio files
 *.mp3
