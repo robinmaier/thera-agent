@@ -1,3 +1,6 @@
 openai
 python-dotenv
 pyaudio
+sounddevice
+soundfile
+numpy
