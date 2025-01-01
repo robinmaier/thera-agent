@@ -119,7 +119,7 @@ class ConversationApp:
             conversation.append({"role": "assistant", "content": initial_message})
 
         while True:
-            print("\nPress Enter to start conversation or type 'exit' to end conversation:")
+            print("\nPress Enter to start conversation / Type 'exit' to end conversation:")
             user_input = input()
             
             if user_input.lower() == 'exit':
