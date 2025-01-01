@@ -5,3 +5,9 @@
 
 # Virtual Environment
 venv/
+
+# Conversations
+conversations/
+
+# Audio files
+*.mp3
