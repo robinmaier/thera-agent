@@ -17,7 +17,7 @@ class ConversationApp:
         self.conversations_dir.mkdir(exist_ok=True)
         
     def record_audio(self):
-        print("\nPress Enter to start recording...")
+        print("\nPress Enter to start your recording...")
         input()
         print("Recording... Press Enter to stop.")
         
@@ -119,7 +119,7 @@ class ConversationApp:
             conversation.append({"role": "assistant", "content": initial_message})
 
         while True:
-            print("\nPress Enter to speak or type 'exit' to end conversation:")
+            print("\nPress Enter to start conversation or type 'exit' to end conversation:")
             user_input = input()
             
             if user_input.lower() == 'exit':
