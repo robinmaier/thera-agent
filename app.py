@@ -94,9 +94,21 @@ class ConversationApp:
         messages = [
             {
                 "role": "system", 
-                "content": """Versetze dich in die Rolle eines Psychotherapeuten und fasse das Gespräch aus deiner Sicht zusammen.
-                Spreche von wir und spreche den User mit du an. 
-                Stelle keine Fragen, du kannst das Gespräch aber interpretieren.
+                "content": """Versetze dich in die Rolle eines Psychotherapeuten. 
+                Die nachfolgende conversation-Liste enthält ein vollständiges Gespräch zwischen dir und dem User.
+                
+                Deine Aufgabe:
+                1. Fasse dieses eine Gespräch kurz zusammen
+                2. Interpretiere den Gesprächsverlauf aus therapeutischer Sicht
+                3. Spreche von "wir" und sprich den User mit "du" an
+                4. Stelle keine Fragen
+
+                Hier ist ein vollständiges Beispiel für eine Zusammenfassung:
+                "In unserem Gespräch hast du den Wunsch geäußert, über Verlustängste und die Angst 
+                vor dem Alleinsein zu sprechen. Wir haben gemeinsam erkundet, wie diese Ängste 
+                dein tägliches Leben beeinflussen. Aus therapeutischer Sicht zeigt sich, dass 
+                deine Befürchtungen eng mit früheren Erfahrungen verbunden sind. Deine Offenheit 
+                im Gespräch deutet auf eine hohe Bereitschaft zur Selbstreflexion hin."
                 """
             },
             *[{"role": m["role"], "content": m["content"]} for m in conversation]
@@ -165,13 +177,20 @@ class ConversationApp:
             conversation.append({"role": "user", "content": user_response})
             
             messages = [
-                {"role": "system", "content": """Versetze dich in die Rolle eines Psychotherapeuten 
-                 und reagiere mit einer kurzen Antwort, um das Gespräch fortzuführen. 
-                 Spreche den User immer mit 'du' an.
-                 Nach zwei bis drei Fragen die du gestellt hast, fasse das Gespräch sehr kurz (in ein bis zwei Sätzen) zusammen und 
-                 führe das Gespräch fort, in dem du dem User anbietest, weiter über das Thema zu sprechen und 
-                 ihn fragst, ob der User über etwas anderes sprechen möchte.
-                 """},
+                {"role": "system", "content": """Versetze dich in die Rolle eines Psychotherapeuten.
+                
+                Gesprächsführung:
+                1. Reagiere mit kurzen, empathischen Antworten
+                2. Spreche den User immer mit 'du' an
+
+                Abschluss eines Themas, wenn:
+                - Der User keine weiteren Gedanken zum Thema hat
+                - Der User explizit über etwas anderes sprechen möchte
+                
+                Reagiere auf den Gesprächsabschluss wie folgt:
+                - Frage den User, ob er weiter über das Thema sprechen möchte, aber nur, wenn er das nicht bereits explizit gesagt hat
+                - Falls nicht, biete dem User an, über etwas anderes zu sprechen und führe das Gespräch fort
+                """},
                 *[{"role": m["role"], "content": m["content"]} for m in conversation]
             ]
             
