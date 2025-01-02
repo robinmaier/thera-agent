@@ -139,7 +139,7 @@ class ConversationApp:
             user_response = self.speech_to_text(audio_file)
             user_name = user_response.split("ich bin ")[-1].strip()
             
-            next_message = f"Hi {user_name}. Über was möchtest du mit mir sprechen?"
+            next_message = f"Hi {user_name}. Über was möchtest du mit mir sprechen? Wir können über alles sprechen, was dich beschäftigt. Beziehungen, Arbeit, Ziele, Konflikte, etc."
             print("\nAssistant:", next_message)
             self.text_to_speech(next_message)
             
@@ -153,9 +153,14 @@ class ConversationApp:
             # Returning user conversation
             system_prompt = f"""Versetze dich in die Rolle eines Psychotherapeuten und lese die bisherige Konversation {history}. 
             Wähle ein Thema, welches dir relevant erscheint und über das du in deiner Rolle als Psychotherapeut sprechen möchtest. 
-            Finde außerdem den Namen des Users und beginne das Gespräch wie folgt.
-            
-            "Hallo {'{Name des Users}'}. Willkommen zurück. Möchtest du heute über {'{Thema}'} sprechen?"
+            Finde außerdem den Namen des Users und beginne das Gespräch wie folgt:
+            - Begrüße den User mit seinem Namen
+            - Starte das Gespräch mit einer kurzen Frage, in die du das Thema einbaust, welches dir relevant erscheint
+            - Stelle sicher, dass es nur um ein Thema geht
+            - Halte dich kurz und spreche nicht zu lange
+
+            Hier ein Beispiel für eine kurze prägnante Gesprächseröffnung:
+            "Hallo Robin. Ich freue mich, dass du heute hier bist. Wie geht es dir mit der Trennung von deiner Partnerin?"
             """
             
             messages = [{"role": "system", "content": system_prompt}]
