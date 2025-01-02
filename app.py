@@ -1,4 +1,5 @@
 import os
+from dotenv import load_dotenv
 import json
 import time
 import sounddevice as sd
@@ -9,9 +10,16 @@ import numpy as np
 from openai import OpenAI
 import subprocess
 
+# Lade Umgebungsvariablen aus .env Datei
+load_dotenv()
+
 class ConversationApp:
     def __init__(self):
-        self.client = OpenAI()
+
+        self.client = OpenAI(
+            api_key=os.getenv("OPENAI_API_KEY"),
+            project=os.getenv("OPENAI_PROJECT_ID")
+        )
         self.sample_rate = 44100
         self.conversations_dir = Path("conversations")
         self.conversations_dir.mkdir(exist_ok=True)
@@ -55,7 +63,10 @@ class ConversationApp:
         )
         
         temp_audio = "temp_speech.mp3"
-        response.stream_to_file(temp_audio)
+        
+        with open(temp_audio, 'wb') as file:
+            for chunk in response.iter_bytes():
+                file.write(chunk)
         
         subprocess.run(['mpg123', temp_audio], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
@@ -77,18 +88,18 @@ class ConversationApp:
         timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
         filename = f"conversation_{timestamp}.json"
         with open(self.conversations_dir / filename, "w") as f:
-            json.dump(conversation, f, indent=2)
+            json.dump(conversation, f, indent=2, ensure_ascii=False)
 
     def generate_summary(self, conversation):
         messages = [
             {
                 "role": "system", 
-                "content": "Versetze dich in die Rolle eines Psychotherapeuten und fasse das Gespräch aus deiner Sicht zusammen. Ohne Fragen, allerdings mit deiner Interpretation des Gesprächs."
+                "content": """Versetze dich in die Rolle eines Psychotherapeuten und fasse das Gespräch aus deiner Sicht zusammen.
+                Spreche von wir und spreche den User mit du an. 
+                Stelle keine Fragen, du kannst das Gespräch aber interpretieren.
+                """
             },
-            {
-                "role": "user", 
-                "content": str(conversation)
-            }
+            *[{"role": m["role"], "content": m["content"]} for m in conversation]
         ]
         
         summary = self.generate_response(messages)
@@ -100,7 +111,7 @@ class ConversationApp:
         
         filename = f"summary_{timestamp}.json"
         with open(summary_dir / filename, "w") as f:
-            json.dump({"summary": summary}, f, indent=2)
+            json.dump({"summary": summary}, f, indent=2, ensure_ascii=False)
 
     def run(self):
         conversation = []
@@ -142,7 +153,7 @@ class ConversationApp:
             conversation.append({"role": "assistant", "content": initial_message})
 
         while True:
-            print("\nPress Enter to speak or type 'exit' to end conversation:")
+            print("\nPress Enter to continue conversation or type 'exit' to end conversation:")
             user_input = input()
             
             if user_input.lower() == 'exit':
@@ -154,7 +165,13 @@ class ConversationApp:
             conversation.append({"role": "user", "content": user_response})
             
             messages = [
-                {"role": "system", "content": "Versetze dich in die Rolle eines Psychotherapeuten und reagiere mit einer kurzen Antwort, um das Gespräch fortzuführen. Spreche den User immer mit 'du' an."},
+                {"role": "system", "content": """Versetze dich in die Rolle eines Psychotherapeuten 
+                 und reagiere mit einer kurzen Antwort, um das Gespräch fortzuführen. 
+                 Spreche den User immer mit 'du' an.
+                 Nach zwei bis drei Fragen die du gestellt hast, fasse das Gespräch sehr kurz (in ein bis zwei Sätzen) zusammen und 
+                 führe das Gespräch fort, in dem du dem User anbietest, weiter über das Thema zu sprechen und 
+                 ihn fragst, ob der User über etwas anderes sprechen möchte.
+                 """},
                 *[{"role": m["role"], "content": m["content"]} for m in conversation]
             ]
             

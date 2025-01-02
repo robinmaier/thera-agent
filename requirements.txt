@@ -3,4 +3,5 @@ python-dotenv
 pyaudio
 sounddevice
 soundfile
+mpg123
 numpy
