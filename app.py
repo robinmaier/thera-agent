@@ -97,6 +97,14 @@ class ConversationApp:
     
         with open(self.conversations_dir / filename, "w", encoding='utf-8') as f:
             json.dump(conversation, f, indent=2, ensure_ascii=False)
+    
+    def save_knowledge_extraction(self, knowledge_extraction, timestamp):
+        knowledge_extraction_dir = Path("knowledge_extraction")
+        knowledge_extraction_dir.mkdir(exist_ok=True)
+        
+        filename = f"summary_{timestamp}.json"
+        with open(knowledge_extraction_dir / filename, "w") as f:
+            json.dump({"knowledge_extraction": knowledge_extraction}, f, indent=2, ensure_ascii=False)
 
     def generate_summary(self, conversation):
         messages = [
@@ -180,9 +188,17 @@ class ConversationApp:
                     - Begrüße den User mit seinem Namen
                     - Formuliere eine kurze, prägnante Eröffnungsfrage, in die du das zuvor ausgewählte Thema einbaust
 
-                    Beispiel:
-                    "Hallo Robin. Ich freue mich, dass du heute hier bist. Das letzte mal haben wir über die Trennung 
-                    von deiner Partnerin gesprochen. Wie geht es dir damit?"
+                    Beispiele (abgetrennt durch <>):
+                    <Hallo Robin. Ich freue mich, dass du heute hier bist. Das letzte mal haben wir über die Trennung 
+                    von deiner Partnerin gesprochen. Wie geht es dir damit?">
+                    
+                    <"Da die Überlastung bei der Arbeit für dich schon längere Zeit ein Thema ist, würde mich 
+                    interessieren, wie sich das auf deinen Alltag auswirkt. Hast du schon Wege gefunden, 
+                    die dir helfen, mit diesem Druck umzugehen?">
+
+                    <"Hallo Robin. Ich freue mich, dass du heute hier bist. Letztes Mal hast du über den Stress 
+                    und Druck bei deiner Arbeit gesprochen. Wie ist es dir seit unserem letzten 
+                    Gespräch damit ergangen?">
                     """ 
                  },
                  *[{"role": m["role"], "content": m["content"]} for m in history]
@@ -265,6 +281,28 @@ class ConversationApp:
         self.save_summary(summary, timestamp)
         
         print("\nConversation and summary saved. Goodbye!")
+
+        new_history = self.load_conversation_history()
+        messages = [
+            {
+                "role": "system", 
+                "content": """
+                Du bist ein intelligenter Assistent, der die bisherige Konversation analysiert und relevante 
+                Informationen extrahiert. Nimm dafür die Sicht eines Psychotherapeuten ein.
+                
+                WICHTIG: Nach diesem System-Prompt folgt eine Liste von chronologisch sortierten Nachrichten 
+                aus vorherigen Gesprächen zwischen einem KI Psychotherapeuten und einem User.
+                
+                Deine Aufgabe:
+                1. Lies die bisherigen Konversationen
+                2. Finde relevante und vielleicht wiederkehrende Themen, Personen und Beziehungen 
+                3. Schreibe eine kurze Zusammenfassung zu den Themen, Personen und Beziehungen
+                """
+            },
+            *[{"role": m["role"], "content": m["content"]} for m in new_history]
+        ]
+        knowledge_extraction = self.generate_response(messages)
+        self.save_knowledge_extraction(knowledge_extraction, timestamp)
 
 if __name__ == "__main__":
     app = ConversationApp()
