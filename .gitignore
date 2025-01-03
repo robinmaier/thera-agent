@@ -9,8 +9,7 @@ venv/
 # Conversations
 conversations/
 conversation_summary/
-consolidate/
-
+knowledge_extraction/
 
 # Audio files
 *.mp3
