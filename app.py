@@ -79,16 +79,33 @@ class ConversationApp:
 
     def load_conversation_history(self):
         history = []
+        
+        # Sammle alle Dateien mit ihren Timestamps
+        files_with_timestamps = []
         for file in self.conversations_dir.glob("conversation_*.json"):
+            try:
+                # Extrahiere Timestamp aus dem Dateinamen (z.B. "conversation_20240301_123456.json")
+                timestamp = file.stem.split('_')[1] + '_' + file.stem.split('_')[2]
+                files_with_timestamps.append((file, timestamp))
+            except IndexError:
+                print(f"Warnung: Ungültiges Dateiformat: {file}")
+                continue
+        
+        # Sortiere nach Timestamp
+        files_with_timestamps.sort(key=lambda x: x[1])
+        
+        # Lade Dateien in sortierter Reihenfolge
+        for file, _ in files_with_timestamps:
             with open(file, "r") as f:
                 history.extend(json.load(f))
+        
         return history
 
-    def save_conversation(self, conversation):
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        filename = f"conversation_{timestamp}.json"
-        with open(self.conversations_dir / filename, "w") as f:
-            json.dump(conversation, f, indent=2, ensure_ascii=False)
+    def save_conversation(self, conversation_data):
+        filename = f"conversation_{conversation_data['metadata']['start_time']}.json"
+        
+        with open(self.conversations_dir / filename, "w", encoding='utf-8') as f:
+            json.dump(conversation_data, f, indent=2, ensure_ascii=False)
 
     def generate_summary(self, conversation):
         messages = [
@@ -126,6 +143,9 @@ class ConversationApp:
             json.dump({"summary": summary}, f, indent=2, ensure_ascii=False)
 
     def run(self):
+        # Erfasse Start-Timestamp
+        start_time = datetime.now().strftime("%Y%m%d_%H%M%S")
+        
         conversation = []
         history = self.load_conversation_history()
         
@@ -204,13 +224,24 @@ class ConversationApp:
             self.text_to_speech(assistant_response)
             conversation.append({"role": "assistant", "content": assistant_response})
 
-        # Nach dem Speichern der Konversation
-        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-        self.save_conversation(conversation)
+        # Erfasse End-Timestamp
+        end_time = datetime.now().strftime("%Y%m%d_%H%M%S")
         
-        # Generiere und speichere die Zusammenfassung
+        # Erstelle Metadaten für die Konversation
+        conversation_data = {
+            "metadata": {
+                "start_time": start_time,
+                "end_time": end_time
+            },
+            "messages": conversation
+        }
+        
+        # Speichere Konversation mit Metadaten
+        self.save_conversation(conversation_data)
+        
+        # Generiere und speichere Zusammenfassung
         summary = self.generate_summary(conversation)
-        self.save_summary(summary, timestamp)
+        self.save_summary(summary, end_time)  # Verwende end_time als Timestamp
         
         print("\nConversation and summary saved. Goodbye!")
 
