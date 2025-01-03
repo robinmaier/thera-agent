@@ -79,33 +79,24 @@ class ConversationApp:
 
     def load_conversation_history(self):
         history = []
-        
-        # Sammle alle Dateien mit ihren Timestamps
-        files_with_timestamps = []
-        for file in self.conversations_dir.glob("conversation_*.json"):
-            try:
-                # Extrahiere Timestamp aus dem Dateinamen (z.B. "conversation_20240301_123456.json")
-                timestamp = file.stem.split('_')[1] + '_' + file.stem.split('_')[2]
-                files_with_timestamps.append((file, timestamp))
-            except IndexError:
-                print(f"Warnung: Ungültiges Dateiformat: {file}")
-                continue
-        
-        # Sortiere nach Timestamp
-        files_with_timestamps.sort(key=lambda x: x[1])
-        
-        # Lade Dateien in sortierter Reihenfolge
-        for file, _ in files_with_timestamps:
-            with open(file, "r") as f:
+    
+    # Sortiere Dateien nach Timestamp im Dateinamen
+        files = sorted(
+            self.conversations_dir.glob("conversation_*.json"),
+            key=lambda x: x.stem.split('_')[1])
+    
+        for file in files:
+            with open(file, "r", encoding='utf-8') as f:
                 history.extend(json.load(f))
-        
+    
         return history
+        print (history)
 
-    def save_conversation(self, conversation_data):
-        filename = f"conversation_{conversation_data['metadata']['start_time']}.json"
-        
+    def save_conversation(self, conversation, timestamp):
+        filename = f"conversation_{timestamp}.json"
+    
         with open(self.conversations_dir / filename, "w", encoding='utf-8') as f:
-            json.dump(conversation_data, f, indent=2, ensure_ascii=False)
+            json.dump(conversation, f, indent=2, ensure_ascii=False)
 
     def generate_summary(self, conversation):
         messages = [
@@ -159,7 +150,7 @@ class ConversationApp:
             user_response = self.speech_to_text(audio_file)
             user_name = user_response.split("ich bin ")[-1].strip()
             
-            next_message = f"Hi {user_name}. Über was möchtest du mit mir sprechen? Wir können über alles sprechen, was dich beschäftigt. Beziehungen, Arbeit, Ziele, Konflikte, etc."
+            next_message = f"Hi {user_name}. Gibt es was, über das du mit mir sprechen möchtest?"
             print("\nAssistant:", next_message)
             self.text_to_speech(next_message)
             
@@ -171,19 +162,31 @@ class ConversationApp:
         
         else:
             # Returning user conversation
-            system_prompt = f"""Versetze dich in die Rolle eines Psychotherapeuten und lese die bisherige Konversation {history}. 
-            Wähle ein Thema, welches dir relevant erscheint und über das du in deiner Rolle als Psychotherapeut sprechen möchtest. 
-            Finde außerdem den Namen des Users und beginne das Gespräch wie folgt:
-            - Begrüße den User mit seinem Namen
-            - Starte das Gespräch mit einer kurzen Frage, in die du das Thema einbaust, welches dir relevant erscheint
-            - Stelle sicher, dass es nur um ein Thema geht
-            - Halte dich kurz und spreche nicht zu lange
+            messages = [
+                {
+                    "role": "system", 
+                    "content":"""Versetze dich in die Rolle eines Psychotherapeuten.
 
-            Hier ein Beispiel für eine kurze prägnante Gesprächseröffnung:
-            "Hallo Robin. Ich freue mich, dass du heute hier bist. Wie geht es dir mit der Trennung von deiner Partnerin?"
-            """
-            
-            messages = [{"role": "system", "content": system_prompt}]
+                    WICHTIG: Nach diesem System-Prompt folgt eine Liste von chronologisch sortierten Nachrichten 
+                    aus vorherigen Gesprächen. Diese Nachrichten dienen nur als Kontext.
+                
+                    Deine Aufgabe:
+                    1. Lies die bisherige Konversationen
+                    2. Finde den Namen des Users
+                    3. Identifiziere wichtige Themen aus den vorherigen Gesprächen
+                   
+                    Dann beginne ein NEUES Gespräch wie folgt:
+                    - Wähle EIN relevantes Thema aus den vorherigen Gesprächen 
+                    - Begrüße den User mit seinem Namen
+                    - Formuliere eine kurze, prägnante Eröffnungsfrage, in die du das zuvor ausgewählte Thema einbaust
+
+                    Beispiel:
+                    "Hallo Robin. Ich freue mich, dass du heute hier bist. Das letzte mal haben wir über die Trennung 
+                    von deiner Partnerin gesprochen. Wie geht es dir damit?"
+                    """ 
+                 },
+                 *[{"role": m["role"], "content": m["content"]} for m in history]
+            ]
             initial_message = self.generate_response(messages)
             print("\nAssistant:", initial_message)
             self.text_to_speech(initial_message)
@@ -202,20 +205,48 @@ class ConversationApp:
             conversation.append({"role": "user", "content": user_response})
             
             messages = [
-                {"role": "system", "content": """Versetze dich in die Rolle eines Psychotherapeuten.
-                
-                Gesprächsführung:
-                1. Reagiere mit kurzen, empathischen Antworten
-                2. Spreche den User immer mit 'du' an
+                {
+                    "role": "system", 
+                    "content": """Versetze dich in die Rolle eines Psychotherapeuten. Die Ziele für das
+                    Gespräch sind:
 
-                Abschluss eines Themas, wenn:
-                - Der User keine weiteren Gedanken zum Thema hat
-                - Der User explizit über etwas anderes sprechen möchte
+                    Selbstreflexion und Selbsterkenntnis fördern
+                    - Der User soll sich seinen Gedanken, Gefühlen und Verhaltensmustern bewusst werden.
+                    - Der User soll Zusammenhänge zwischen aktuellen Problemen und möglichen Ursachen erkennen.
+
+                    Problemlösungsstrategien entwickeln
+                    - Neue Ansätze erarbeiten, um Herausforderungen im Alltag zu bewältigen.
+                    - Werkzeuge an die Hand bekommen, um Stress, Ängste oder Konflikte besser zu bewältigen.
+
+                    Emotionale Entlastung
+                    - Raum schaffen, um Gefühle in einer sicheren, wertfreien Umgebung auszudrücken.
+                    - Emotionale Stabilität fördern.
+
+                    Änderung dysfunktionaler Muster
+                    - Ungünstige Denk- und Verhaltensmuster identifizieren und durch hilfreichere ersetzen.
+                    - Negative Glaubenssätze oder Automatismen hinterfragen.
+
+                    Förderung von Ressourcen und Resilienz
+                    - Persönliche Stärken und Ressourcen entdecken und aktivieren.
+                    - Die Fähigkeit entwickeln, mit schwierigen Situationen besser umzugehen.
+
+                    Beziehungs- und Kommunikationsfähigkeiten verbessern
+                    - Zwischenmenschliche Dynamiken reflektieren und optimieren.
+                    - Gesunde Grenzen setzen lernen und bessere Kommunikationsmuster entwickeln.
                 
-                Reagiere auf den Gesprächsabschluss wie folgt:
-                - Frage den User, ob er weiter über das Thema sprechen möchte, aber nur, wenn er das nicht bereits explizit gesagt hat
-                - Falls nicht, biete dem User an, über etwas anderes zu sprechen und führe das Gespräch fort
-                """},
+                    Gesprächsführung:
+                    1. Reagiere mit kurzen, empathischen Antworten
+                    2. Spreche den User immer mit 'du' an
+
+                    Abschluss eines Themas, wenn:
+                    - Der User keine weiteren Gedanken zum Thema hat
+                    - Der User explizit über etwas anderes sprechen möchte
+                
+                    Reagiere auf den Gesprächsabschluss wie folgt:
+                    - Frage den User, ob er weiter über das Thema sprechen möchte, aber nur, wenn er das nicht bereits explizit gesagt hat
+                    - Falls nicht, biete dem User an, über etwas anderes zu sprechen und führe das Gespräch fort
+                    """
+                },
                 *[{"role": m["role"], "content": m["content"]} for m in conversation]
             ]
             
@@ -224,24 +255,14 @@ class ConversationApp:
             self.text_to_speech(assistant_response)
             conversation.append({"role": "assistant", "content": assistant_response})
 
-        # Erfasse End-Timestamp
-        end_time = datetime.now().strftime("%Y%m%d_%H%M%S")
-        
-        # Erstelle Metadaten für die Konversation
-        conversation_data = {
-            "metadata": {
-                "start_time": start_time,
-                "end_time": end_time
-            },
-            "messages": conversation
-        }
-        
-        # Speichere Konversation mit Metadaten
-        self.save_conversation(conversation_data)
+        timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+
+        # Speichere Konversation
+        self.save_conversation(conversation, timestamp)
         
         # Generiere und speichere Zusammenfassung
         summary = self.generate_summary(conversation)
-        self.save_summary(summary, end_time)  # Verwende end_time als Timestamp
+        self.save_summary(summary, timestamp)
         
         print("\nConversation and summary saved. Goodbye!")
 
